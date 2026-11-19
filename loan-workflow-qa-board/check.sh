@@ -94,7 +94,8 @@ sys.exit(1 if fail else 0)
 PY
 
 # 6. The count of turns
-if [ -d .git ]; then echo "info  turns: $(git rev-list --count HEAD 2>/dev/null || echo 0) commits"
+if git rev-parse --git-dir >/dev/null 2>&1; then
+  echo "info  turns: $(git rev-list --count HEAD -- . 2>/dev/null || echo 0) commits touching this project"
 else echo "info  no git repository yet; turns not counted"; fi
 
 [ $fail -eq 0 ] && echo "GATE  pass" || echo "GATE  refused"
