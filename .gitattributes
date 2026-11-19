@@ -1,2 +1,6 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Shell scripts and hooks keep LF so sh runs them on every platform
+*.sh text eol=lf
+.githooks/* text eol=lf

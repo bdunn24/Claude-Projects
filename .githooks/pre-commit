@@ -1,0 +1,9 @@
+#!/bin/sh
+# Runs each project's gate before every commit. Any red gate stops the commit.
+status=0
+for gate in */check.sh; do
+  [ -f "$gate" ] || continue
+  echo "== $(dirname "$gate")"
+  (cd "$(dirname "$gate")" && sh ./check.sh) || status=1
+done
+exit $status

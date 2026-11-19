@@ -1,0 +1,48 @@
+{
+  "name": "Loan Workflow QA Board",
+  "note": "Sample data. Synthetic stages and test cases; no borrower or loan-level data.",
+  "asOf": "2026-11-18",
+  "run": "Sample run 2026-11-18",
+  "idPattern": "LW[-_][A-Z]+[-_]\\d{3}",
+  "stages": [
+    { "code": "APP", "name": "Application intake", "tests": [
+      { "id": "LW-APP-001", "title": "Borrower submits a complete application", "selenium": "test_LW_APP_001_submit_complete_application", "status": "pass" },
+      { "id": "LW-APP-002", "title": "Required-field errors show on a blank form", "selenium": "test_LW_APP_002_required_field_errors", "status": "pass" },
+      { "id": "LW-APP-003", "title": "Saved draft reopens with entries intact", "selenium": "test_LW_APP_003_resume_saved_draft", "status": "pass" }
+    ]},
+    { "code": "DSC", "name": "Disclosures", "tests": [
+      { "id": "LW-DSC-001", "title": "Loan Estimate issues within 3 business days", "selenium": "test_LW_DSC_001_loan_estimate_timing", "status": "pass" },
+      { "id": "LW-DSC-002", "title": "Borrower e-signs the intent to proceed", "selenium": "test_LW_DSC_002_esign_intent_to_proceed", "status": "pass" }
+    ]},
+    { "code": "CRD", "name": "Credit and income", "tests": [
+      { "id": "LW-CRD-001", "title": "Credit pull returns a score to the file", "selenium": "test_LW_CRD_001_credit_pull_returns_score", "status": "pass" },
+      { "id": "LW-CRD-002", "title": "DTI recalculates when income changes", "selenium": "test_LW_CRD_002_dti_recalculates", "status": "fail", "message": "Expected DTI 36.0%, page shows 38.4% after income edit" },
+      { "id": "LW-CRD-003", "title": "Income document upload attaches to the file", "selenium": "test_LW_CRD_003_income_doc_upload", "status": "pass" }
+    ]},
+    { "code": "APR", "name": "Appraisal", "tests": [
+      { "id": "LW-APR-001", "title": "Appraisal order goes to the vendor queue", "selenium": "test_LW_APR_001_order_appraisal", "status": "blocked", "message": "Appraisal vendor sandbox down since 09:40" },
+      { "id": "LW-APR-002", "title": "Appraised value below price raises an LTV flag", "selenium": "test_LW_APR_002_low_value_ltv_flag", "status": "blocked", "message": "Depends on LW-APR-001" }
+    ]},
+    { "code": "UW", "name": "Underwriting", "tests": [
+      { "id": "LW-UW-001", "title": "AUS findings import into the file", "selenium": "test_LW_UW_001_aus_findings_import", "status": "pass" },
+      { "id": "LW-UW-002", "title": "Underwriter approves with conditions", "selenium": "test_LW_UW_002_approve_with_conditions", "status": "notrun" },
+      { "id": "LW-UW-003", "title": "Suspend decision notifies the loan officer", "selenium": "test_LW_UW_003_suspend_notifies_lo", "status": "notrun" }
+    ]},
+    { "code": "COND", "name": "Conditions", "tests": [
+      { "id": "LW-COND-001", "title": "Cleared condition moves to the satisfied list", "selenium": "test_LW_COND_001_clear_condition", "status": "notrun" },
+      { "id": "LW-COND-002", "title": "Loan officer uploads a document against a condition", "selenium": "test_LW_COND_002_upload_against_condition", "status": "notrun" }
+    ]},
+    { "code": "CTC", "name": "Clear to close", "tests": [
+      { "id": "LW-CTC-001", "title": "Clear to close sets once all conditions clear", "selenium": "test_LW_CTC_001_ctc_after_conditions", "status": "notrun" },
+      { "id": "LW-CTC-002", "title": "Closing Disclosure issues 3 days before closing", "selenium": "test_LW_CTC_002_cd_timing", "status": "notrun" }
+    ]},
+    { "code": "CLS", "name": "Closing", "tests": [
+      { "id": "LW-CLS-001", "title": "Closing package generates every required document", "selenium": "test_LW_CLS_001_closing_package", "status": "notrun" },
+      { "id": "LW-CLS-002", "title": "Signed package uploads and locks the file", "selenium": "test_LW_CLS_002_signed_package_locks", "status": "notrun" }
+    ]},
+    { "code": "FND", "name": "Funding", "tests": [
+      { "id": "LW-FND-001", "title": "Funding request posts with the wire amount", "selenium": "test_LW_FND_001_funding_request", "status": "notrun" },
+      { "id": "LW-FND-002", "title": "Funded loan shows status Funded", "selenium": "test_LW_FND_002_funded_status", "status": "notrun" }
+    ]}
+  ]
+}

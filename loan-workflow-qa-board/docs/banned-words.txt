@@ -1,0 +1,10 @@
+# One word or phrase per line, case-insensitive. Lines starting with # are ignored.
+# Starter list set by Claude, 2026-11-18, pending Brit Dunn's review.
+# Replace with the PhoenixTeam house list when you have it.
+leverage
+synergy
+seamless
+best-in-class
+world-class
+cutting-edge
+game-changer

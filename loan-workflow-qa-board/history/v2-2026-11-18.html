@@ -1,0 +1,393 @@
+<meta charset="utf-8">
+<title>Loan Workflow QA Board</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@300;400;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: navy masthead with the Phoenix-orange rule, run summary, the loan pipeline as a row of stations, then cases beside the Selenium import.
+   Brand tokens: .claude/skills/brand/SKILL.md (measured from the Value Engineering Textbook, 2026-11-18). */
+:root {
+  --navy: #0e1f3f;        /* brand: masthead, section pages */
+  --orange: #f47823;      /* brand: the Phoenix accent, used sparingly */
+  --orange-deep: #b8471a; /* brand: orange for text on light grounds */
+  --bg: #f5f6f8;
+  --surface: #ffffff;
+  --ink: #1b2233;
+  --muted: #5b6474;
+  --line: #e3e5ea;
+  --line-strong: #c9cfda;
+  --accent: #0e1f3f;
+  --on-accent: #ffffff;
+  --pass: #1e7b45;   --pass-bg: #e6ffea;
+  --fail: #c0262d;   --fail-bg: #fdeaea;
+  --block: #a06a00;  --block-bg: #fff4dc;
+  --idle: #8c94a3;   --idle-bg: #eef0f3;
+  --progress: #2f5aa8;
+  --f-display: "Sofia Pro", "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-body: "Sofia Pro", "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0a1630; --surface: #0e1f3f; --ink: #e3e5ea; --muted: #a7afbe; --line: #1f2f52; --line-strong: #33456b;
+    --accent: #f47823; --on-accent: #0e1f3f; --orange-deep: #f8995a;
+    --pass: #5be37d; --pass-bg: #12331f; --fail: #ff8a80; --fail-bg: #3b1a20;
+    --block: #f4c25a; --block-bg: #3a2c10; --idle: #8c94a3; --idle-bg: #1b2a49; --progress: #8fb0ff;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0a1630; --surface: #0e1f3f; --ink: #e3e5ea; --muted: #a7afbe; --line: #1f2f52; --line-strong: #33456b;
+  --accent: #f47823; --on-accent: #0e1f3f; --orange-deep: #f8995a;
+  --pass: #5be37d; --pass-bg: #12331f; --fail: #ff8a80; --fail-bg: #3b1a20;
+  --block: #f4c25a; --block-bg: #3a2c10; --idle: #8c94a3; --idle-bg: #1b2a49; --progress: #8fb0ff;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font: 15px/1.5 var(--f-body);
+  padding-block: 24px 48px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 1180px; margin: 0 auto; display: grid; gap: 20px; }
+h1, h2 { font-family: var(--f-display); font-weight: 600; text-wrap: balance; margin: 0; letter-spacing: -.005em; }
+h1 { font-size: 1.9rem; line-height: 1.1; }
+h2 { font-size: 1.15rem; }
+.mono { font-family: var(--f-mono); font-size: .86em; }
+.eyebrow { font-size: .72rem; letter-spacing: .1em; text-transform: uppercase; color: var(--orange-deep); font-weight: 600; }
+button, select, input, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Header */
+header {
+  background: var(--navy); color: #ffffff; border-radius: 10px; padding: 18px 20px 16px;
+  border-top: 4px solid var(--orange);
+  display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 12px 16px;
+}
+header .eyebrow { color: var(--orange); }
+header h1 { font-weight: 600; }
+header .meta { color: #c9cfda; font-size: .88rem; }
+.sample { display: inline-block; margin-left: 8px; padding: 1px 8px; border-radius: 999px; border: 1px dashed #a7afbe; font-size: .72rem; font-weight: 400; color: #c9cfda; vertical-align: middle; letter-spacing: .02em; }
+
+/* Summary */
+.summary { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: grid; gap: 12px; }
+.counts { display: flex; flex-wrap: wrap; gap: 8px 24px; }
+.count { display: flex; align-items: baseline; gap: 8px; }
+.count b { font-family: var(--f-display); font-size: 1.6rem; font-variant-numeric: tabular-nums; }
+.count span { color: var(--muted); font-size: .9rem; }
+.bar { display: flex; height: 10px; border-radius: 5px; overflow: hidden; background: var(--idle-bg); }
+.bar i { display: block; height: 100%; }
+.dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex: none; }
+.c-pass { color: var(--pass); } .c-fail { color: var(--fail); } .c-blocked { color: var(--block); } .c-notrun { color: var(--idle); }
+.b-pass { background: var(--pass); } .b-fail { background: var(--fail); } .b-blocked { background: var(--block); } .b-notrun { background: var(--idle); }
+
+/* Pipeline */
+.pipe-scroll { overflow-x: auto; padding-bottom: 4px; }
+.pipe { display: grid; grid-template-columns: repeat(9, minmax(116px, 1fr)); gap: 0; list-style: none; margin: 0; padding: 0; min-width: 1060px; }
+.pipe li { position: relative; display: flex; }
+.stage {
+  width: 100%; text-align: left; background: var(--surface); border: 1px solid var(--line);
+  border-left: none; padding: 12px 12px 12px 14px; display: flex; flex-direction: column; gap: 6px; min-height: 136px; position: relative;
+}
+.pipe li:first-child .stage { border-left: 1px solid var(--line); border-radius: 10px 0 0 10px; }
+.pipe li:last-child .stage { border-radius: 0 10px 10px 0; }
+.stage::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 4px; background: var(--st); }
+.stage[aria-pressed="true"] { background: var(--st-bg); box-shadow: inset 0 0 0 2px var(--st); z-index: 1; }
+.stage:hover { background: var(--st-bg); }
+.stage .step { font-family: var(--f-mono); font-size: .72rem; color: var(--muted); }
+.stage .name { font-weight: 600; line-height: 1.25; }
+.stage .state { font-size: .8rem; font-weight: 600; color: var(--st); display: flex; align-items: center; gap: 6px; }
+.stage .pips { display: flex; gap: 3px; flex-wrap: wrap; margin-top: auto; }
+.stage .pips i { width: 14px; height: 6px; border-radius: 2px; }
+.stage .gate { font-size: .74rem; color: var(--muted); }
+.s-pass { --st: var(--pass); --st-bg: var(--pass-bg); }
+.s-fail { --st: var(--fail); --st-bg: var(--fail-bg); }
+.s-blocked { --st: var(--block); --st-bg: var(--block-bg); }
+.s-notrun { --st: var(--idle); --st-bg: var(--idle-bg); }
+.s-partial { --st: var(--progress); --st-bg: var(--idle-bg); }
+
+/* Lower panels */
+.lower { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 860px) { .lower { grid-template-columns: minmax(0, 1fr); } }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: grid; gap: 14px; min-width: 0; }
+.panel-head { display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between; align-items: baseline; }
+.cases { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
+.case { display: grid; grid-template-columns: 4px minmax(0, 1fr) auto; gap: 12px; padding: 12px 0; border-top: 1px solid var(--line); align-items: start; }
+.case:first-child { border-top: none; }
+.case .stripe { align-self: stretch; border-radius: 2px; background: var(--st); }
+.case .title { font-weight: 500; }
+.case .sel { color: var(--muted); word-break: break-all; }
+.case .msg { margin-top: 4px; font-size: .86rem; color: var(--st); }
+.case .src { font-size: .72rem; color: var(--muted); }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg button { border: none; background: transparent; padding: 5px 9px; font-size: .78rem; font-weight: 600; color: var(--muted); }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-pressed="true"].pass { background: var(--pass-bg); color: var(--pass); }
+.seg button[aria-pressed="true"].fail { background: var(--fail-bg); color: var(--fail); }
+.seg button[aria-pressed="true"].blocked { background: var(--block-bg); color: var(--block); }
+.seg button[aria-pressed="true"].notrun { background: var(--idle-bg); color: var(--ink); }
+@media (max-width: 520px) { .case { grid-template-columns: 4px minmax(0, 1fr); } .case .seg { grid-column: 2; } }
+
+/* Import */
+textarea { width: 100%; min-height: 150px; resize: vertical; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 10px; font: .8rem/1.45 var(--f-mono); }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.btn { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 7px 12px; font-weight: 500; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 600; }
+.btn:hover { border-color: var(--accent); }
+.file { font-size: .85rem; color: var(--muted); }
+.file input { max-width: 100%; }
+.report { font-size: .86rem; border-radius: 8px; padding: 10px 12px; background: var(--bg); border: 1px solid var(--line); }
+.report[data-kind="error"] { border-color: var(--fail); color: var(--fail); }
+.legend { font-size: .82rem; color: var(--muted); display: grid; gap: 4px; }
+.legend code { font-family: var(--f-mono); font-size: .9em; color: var(--ink); }
+footer { color: var(--muted); font-size: .78rem; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 16px; border-top: 1px solid var(--line-strong); padding-top: 10px; }
+footer span:first-child { letter-spacing: .04em; }
+@media (prefers-reduced-motion: no-preference) { .stage, .bar i { transition: background-color .15s, width .3s; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <div class="eyebrow">PhoenixTeam · QA automation · loan origination</div>
+      <h1>Loan Workflow QA Board <span class="sample">Sample data</span></h1>
+    </div>
+    <div class="meta"><span id="run-label"></span> · as of <span id="as-of" class="mono"></span></div>
+  </header>
+
+  <section class="summary" aria-label="Run summary">
+    <div class="counts" id="counts"></div>
+    <div class="bar" id="bar" role="img"></div>
+  </section>
+
+  <section aria-label="Loan workflow stages">
+    <div class="pipe-scroll"><ol class="pipe" id="pipe"></ol></div>
+  </section>
+
+  <div class="lower">
+    <section class="panel" aria-live="polite">
+      <div class="panel-head">
+        <div>
+          <div class="eyebrow" id="stage-eyebrow"></div>
+          <h2 id="stage-title"></h2>
+        </div>
+        <div class="file" id="stage-gate"></div>
+      </div>
+      <ul class="cases" id="cases"></ul>
+    </section>
+
+    <section class="panel">
+      <div>
+        <div class="eyebrow">Selenium results</div>
+        <h2>Load a test run</h2>
+      </div>
+      <label class="file" for="junit-file">JUnit XML from <span class="mono">pytest --junitxml</span>, TestNG or Maven Surefire
+        <input type="file" id="junit-file" accept=".xml,.json,text/xml,application/json">
+      </label>
+      <textarea id="paste" aria-label="Paste JUnit XML or results JSON" placeholder="…or paste JUnit XML or results JSON here"></textarea>
+      <div class="row">
+        <button class="btn primary" id="apply">Apply results</button>
+        <button class="btn" id="sample-run">Load sample run</button>
+      </div>
+      <div class="report" id="report" hidden></div>
+      <div class="legend">
+        <div>Each <code>&lt;testcase&gt;</code> maps by the ID in its name, e.g. <code>test_LW_CRD_002_…</code></div>
+        <div><code>&lt;failure&gt;</code> or <code>&lt;error&gt;</code> → Fail · <code>&lt;skipped&gt;</code> → Blocked · otherwise → Pass</div>
+      </div>
+      <div class="row">
+        <button class="btn" id="copy">Copy results JSON</button>
+        <button class="btn" id="reset">Reset to sample</button>
+      </div>
+    </section>
+  </div>
+
+  <footer><span>PhoenixTeam · QA automation · board v2 · 2026-11-18 · Sample data</span><span>Synthetic stages and test cases for practice; no borrower or loan-level data. Marks you set by hand stay in this browser.</span></footer>
+</div>
+
+<script id="workflow-data" type="application/json">{"name": "Loan Workflow QA Board", "note": "Sample data. Synthetic stages and test cases; no borrower or loan-level data.", "asOf": "2026-11-18", "run": "Sample run 2026-11-18", "idPattern": "LW[-_][A-Z]+[-_]\\d{3}", "stages": [{"code": "APP", "name": "Application intake", "tests": [{"id": "LW-APP-001", "title": "Borrower submits a complete application", "selenium": "test_LW_APP_001_submit_complete_application", "status": "pass"}, {"id": "LW-APP-002", "title": "Required-field errors show on a blank form", "selenium": "test_LW_APP_002_required_field_errors", "status": "pass"}, {"id": "LW-APP-003", "title": "Saved draft reopens with entries intact", "selenium": "test_LW_APP_003_resume_saved_draft", "status": "pass"}]}, {"code": "DSC", "name": "Disclosures", "tests": [{"id": "LW-DSC-001", "title": "Loan Estimate issues within 3 business days", "selenium": "test_LW_DSC_001_loan_estimate_timing", "status": "pass"}, {"id": "LW-DSC-002", "title": "Borrower e-signs the intent to proceed", "selenium": "test_LW_DSC_002_esign_intent_to_proceed", "status": "pass"}]}, {"code": "CRD", "name": "Credit and income", "tests": [{"id": "LW-CRD-001", "title": "Credit pull returns a score to the file", "selenium": "test_LW_CRD_001_credit_pull_returns_score", "status": "pass"}, {"id": "LW-CRD-002", "title": "DTI recalculates when income changes", "selenium": "test_LW_CRD_002_dti_recalculates", "status": "fail", "message": "Expected DTI 36.0%, page shows 38.4% after income edit"}, {"id": "LW-CRD-003", "title": "Income document upload attaches to the file", "selenium": "test_LW_CRD_003_income_doc_upload", "status": "pass"}]}, {"code": "APR", "name": "Appraisal", "tests": [{"id": "LW-APR-001", "title": "Appraisal order goes to the vendor queue", "selenium": "test_LW_APR_001_order_appraisal", "status": "blocked", "message": "Appraisal vendor sandbox down since 09:40"}, {"id": "LW-APR-002", "title": "Appraised value below price raises an LTV flag", "selenium": "test_LW_APR_002_low_value_ltv_flag", "status": "blocked", "message": "Depends on LW-APR-001"}]}, {"code": "UW", "name": "Underwriting", "tests": [{"id": "LW-UW-001", "title": "AUS findings import into the file", "selenium": "test_LW_UW_001_aus_findings_import", "status": "pass"}, {"id": "LW-UW-002", "title": "Underwriter approves with conditions", "selenium": "test_LW_UW_002_approve_with_conditions", "status": "notrun"}, {"id": "LW-UW-003", "title": "Suspend decision notifies the loan officer", "selenium": "test_LW_UW_003_suspend_notifies_lo", "status": "notrun"}]}, {"code": "COND", "name": "Conditions", "tests": [{"id": "LW-COND-001", "title": "Cleared condition moves to the satisfied list", "selenium": "test_LW_COND_001_clear_condition", "status": "notrun"}, {"id": "LW-COND-002", "title": "Loan officer uploads a document against a condition", "selenium": "test_LW_COND_002_upload_against_condition", "status": "notrun"}]}, {"code": "CTC", "name": "Clear to close", "tests": [{"id": "LW-CTC-001", "title": "Clear to close sets once all conditions clear", "selenium": "test_LW_CTC_001_ctc_after_conditions", "status": "notrun"}, {"id": "LW-CTC-002", "title": "Closing Disclosure issues 3 days before closing", "selenium": "test_LW_CTC_002_cd_timing", "status": "notrun"}]}, {"code": "CLS", "name": "Closing", "tests": [{"id": "LW-CLS-001", "title": "Closing package generates every required document", "selenium": "test_LW_CLS_001_closing_package", "status": "notrun"}, {"id": "LW-CLS-002", "title": "Signed package uploads and locks the file", "selenium": "test_LW_CLS_002_signed_package_locks", "status": "notrun"}]}, {"code": "FND", "name": "Funding", "tests": [{"id": "LW-FND-001", "title": "Funding request posts with the wire amount", "selenium": "test_LW_FND_001_funding_request", "status": "notrun"}, {"id": "LW-FND-002", "title": "Funded loan shows status Funded", "selenium": "test_LW_FND_002_funded_status", "status": "notrun"}]}]}</script>
+<script>
+(function () {
+  const DATA = JSON.parse(document.getElementById("workflow-data").textContent);
+  const KEY = "lwqa:v1";
+  const LABEL = { pass: "Pass", fail: "Fail", blocked: "Blocked", notrun: "Not run", partial: "In progress" };
+  const ORDER = ["pass", "fail", "blocked", "notrun"];
+  const idRe = new RegExp(DATA.idPattern, "i");
+  const norm = s => s.toUpperCase().replace(/_/g, "-");
+
+  const base = {};
+  DATA.stages.forEach(st => st.tests.forEach(t => { base[t.id] = { status: t.status, message: t.message || "", source: "sample" }; }));
+
+  let state = { results: structuredClone(base), run: DATA.run, asOf: DATA.asOf, selected: null };
+  try {
+    const saved = JSON.parse(localStorage.getItem(KEY) || "null");
+    if (saved && saved.results) state = Object.assign(state, saved);
+  } catch (e) { /* storage unavailable: use the sample */ }
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} };
+
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+  function stageStatus(st) {
+    const s = st.tests.map(t => state.results[t.id].status);
+    if (s.includes("fail")) return "fail";
+    if (s.includes("blocked")) return "blocked";
+    if (s.every(x => x === "pass")) return "pass";
+    if (s.every(x => x === "notrun")) return "notrun";
+    return "partial";
+  }
+  function firstStop() {
+    for (let i = 0; i < DATA.stages.length; i++) {
+      const s = stageStatus(DATA.stages[i]);
+      if (s === "fail" || s === "blocked") return i;
+    }
+    return -1;
+  }
+
+  function render() {
+    const all = Object.values(state.results);
+    const n = k => all.filter(r => r.status === k).length;
+    $("run-label").textContent = state.run;
+    $("as-of").textContent = state.asOf;
+    $("counts").innerHTML = ORDER.map(k =>
+      `<div class="count"><span class="dot b-${k}"></span><b class="c-${k}">${n(k)}</b><span>${LABEL[k]}</span></div>`
+    ).join("") + `<div class="count"><b>${all.length}</b><span>test cases · ${DATA.stages.length} stages</span></div>`;
+    $("bar").innerHTML = ORDER.map(k => `<i class="b-${k}" style="width:${(100 * n(k) / all.length).toFixed(2)}%"></i>`).join("");
+    $("bar").setAttribute("aria-label", ORDER.map(k => `${n(k)} ${LABEL[k]}`).join(", "));
+
+    const stop = firstStop();
+    if (state.selected == null) state.selected = stop >= 0 ? stop : 0;
+    $("pipe").innerHTML = DATA.stages.map((st, i) => {
+      const s = stageStatus(st);
+      const pips = st.tests.map(t => `<i class="b-${state.results[t.id].status}"></i>`).join("");
+      const passed = st.tests.filter(t => state.results[t.id].status === "pass").length;
+      const gate = stop >= 0 && i > stop ? `<span class="gate">Waits on ${esc(DATA.stages[stop].code)}</span>` : "";
+      return `<li><button class="stage s-${s}" data-i="${i}" aria-pressed="${i === state.selected}">
+        <span class="step">${String(i + 1).padStart(2, "0")} · ${esc(st.code)}</span>
+        <span class="name">${esc(st.name)}</span>
+        <span class="state"><span class="dot" style="background:var(--st)"></span>${LABEL[s]} · ${passed}/${st.tests.length}</span>
+        ${gate}<span class="pips">${pips}</span></button></li>`;
+    }).join("");
+
+    const st = DATA.stages[state.selected];
+    $("stage-eyebrow").textContent = `Stage ${state.selected + 1} of ${DATA.stages.length} · ${st.code}`;
+    $("stage-title").textContent = st.name;
+    $("stage-gate").textContent = stop >= 0 && state.selected > stop ? `Downstream of ${DATA.stages[stop].name}, which is ${LABEL[stageStatus(DATA.stages[stop])].toLowerCase()}` : "";
+    $("cases").innerHTML = st.tests.map(t => {
+      const r = state.results[t.id];
+      const seg = ORDER.map(k => `<button class="${k}" data-id="${t.id}" data-s="${k}" aria-pressed="${r.status === k}">${LABEL[k]}</button>`).join("");
+      return `<li class="case s-${r.status}"><span class="stripe"></span>
+        <div><div class="title">${esc(t.title)}</div>
+        <div class="mono sel">${esc(t.id)} · ${esc(t.selenium)}</div>
+        ${r.message ? `<div class="msg">${esc(r.message)}</div>` : ""}
+        <div class="src">${r.source === "sample" ? "Sample" : r.source === "manual" ? "Marked by hand" : "From " + esc(r.source)}</div></div>
+        <div class="seg" role="group" aria-label="Status for ${esc(t.id)}">${seg}</div></li>`;
+    }).join("");
+  }
+
+  $("pipe").addEventListener("click", e => {
+    const b = e.target.closest(".stage"); if (!b) return;
+    state.selected = +b.dataset.i; save(); render();
+  });
+  $("cases").addEventListener("click", e => {
+    const b = e.target.closest("button[data-s]"); if (!b) return;
+    const r = state.results[b.dataset.id];
+    r.status = b.dataset.s; r.source = "manual";
+    if (r.status === "pass" || r.status === "notrun") r.message = "";
+    save(); render();
+  });
+
+  function parse(text, sourceName) {
+    text = text.trim();
+    if (!text) throw new Error("Nothing to apply. Choose a file or paste results first.");
+    const found = [];
+    if (text[0] === "{" || text[0] === "[") {
+      const j = JSON.parse(text);
+      const rows = Array.isArray(j) ? j : j.results;
+      if (!Array.isArray(rows)) throw new Error("JSON needs a list of {id, status} rows, or {results: [...]}.");
+      rows.forEach(r => found.push({ key: String(r.id || ""), status: String(r.status || "").toLowerCase().replace(/[^a-z]/g, ""), message: r.message || "" }));
+      return { found, run: j.run, asOf: j.asOf };
+    }
+    const doc = new DOMParser().parseFromString(text, "application/xml");
+    if (doc.querySelector("parsererror")) throw new Error("This is not valid XML. Check that you pasted the whole JUnit file.");
+    const cases = doc.getElementsByTagName("testcase");
+    if (!cases.length) throw new Error("No <testcase> elements found. Load a JUnit XML report.");
+    for (const tc of cases) {
+      const name = (tc.getAttribute("name") || "") + " " + (tc.getAttribute("classname") || "");
+      const f = tc.getElementsByTagName("failure")[0] || tc.getElementsByTagName("error")[0];
+      const sk = tc.getElementsByTagName("skipped")[0];
+      const pick = el => (el.getAttribute("message") || el.textContent || "").trim().split("\n")[0].slice(0, 200);
+      found.push({ key: name, status: f ? "fail" : sk ? "blocked" : "pass", message: f ? pick(f) : sk ? pick(sk) : "" });
+    }
+    const suite = doc.querySelector("testsuite");
+    return { found, run: sourceName || (suite && suite.getAttribute("name")), asOf: suite && (suite.getAttribute("timestamp") || "").slice(0, 10) };
+  }
+
+  function apply(text, sourceName) {
+    const rep = $("report");
+    try {
+      const { found, run, asOf } = parse(text, sourceName);
+      let matched = 0; const unmatched = [];
+      const statusOk = new Set(ORDER);
+      found.forEach(f => {
+        const m = f.key.match(idRe);
+        const id = m && norm(m[0]);
+        if (id && state.results[id] && statusOk.has(f.status)) {
+          state.results[id] = { status: f.status, message: f.message, source: run || "test run" };
+          matched++;
+        } else unmatched.push(f.key.trim().split(" ")[0] || "(no name)");
+      });
+      if (run) state.run = run;
+      if (asOf) state.asOf = asOf;
+      save(); render();
+      rep.dataset.kind = matched ? "ok" : "error";
+      rep.innerHTML = `Applied ${matched} of ${found.length} test results.` +
+        (unmatched.length ? ` ${unmatched.length} had no board ID: <span class="mono">${esc(unmatched.slice(0, 6).join(", "))}${unmatched.length > 6 ? "…" : ""}</span>` : "");
+    } catch (err) {
+      rep.dataset.kind = "error"; rep.textContent = err.message;
+    }
+    rep.hidden = false;
+  }
+
+  $("apply").addEventListener("click", () => apply($("paste").value));
+  $("junit-file").addEventListener("change", e => {
+    const file = e.target.files[0]; if (!file) return;
+    const rd = new FileReader();
+    rd.onload = () => apply(String(rd.result), file.name);
+    rd.readAsText(file);
+  });
+
+  const SAMPLE = `<?xml version="1.0" encoding="utf-8"?>
+<testsuites><testsuite name="Selenium nightly 2026-11-18" tests="8" failures="1" skipped="1" timestamp="2026-11-18T06:00:00">
+  <testcase classname="tests.selenium.test_loan_workflow" name="test_LW_APR_001_order_appraisal" time="11.2"/>
+  <testcase classname="tests.selenium.test_loan_workflow" name="test_LW_APR_002_low_value_ltv_flag" time="9.8"/>
+  <testcase classname="tests.selenium.test_loan_workflow" name="test_LW_CRD_002_dti_recalculates" time="7.4"/>
+  <testcase classname="tests.selenium.test_loan_workflow" name="test_LW_UW_002_approve_with_conditions" time="14.0"/>
+  <testcase classname="tests.selenium.test_loan_workflow" name="test_LW_UW_003_suspend_notifies_lo" time="6.1">
+    <failure message="AssertionError: notification banner not found within 10s">TimeoutException</failure>
+  </testcase>
+  <testcase classname="tests.selenium.test_loan_workflow" name="test_LW_COND_001_clear_condition" time="8.3"/>
+  <testcase classname="tests.selenium.test_loan_workflow" name="test_LW_COND_002_upload_against_condition" time="0.0">
+    <skipped message="BLOCKED: document service sandbox returns 503"/>
+  </testcase>
+  <testcase classname="tests.selenium.test_smoke" name="test_login_page_loads" time="2.0"/>
+</testsuite></testsuites>`;
+  $("sample-run").addEventListener("click", () => { $("paste").value = SAMPLE; apply(SAMPLE); });
+
+  $("copy").addEventListener("click", async () => {
+    const out = JSON.stringify({ run: state.run, asOf: state.asOf,
+      results: Object.entries(state.results).map(([id, r]) => ({ id, status: r.status, message: r.message || undefined })) }, null, 2);
+    const rep = $("report");
+    try { await navigator.clipboard.writeText(out); rep.dataset.kind = "ok"; rep.textContent = "Copied results JSON to the clipboard."; }
+    catch (e) { $("paste").value = out; $("paste").select(); rep.dataset.kind = "ok"; rep.textContent = "Clipboard unavailable. The JSON is in the box above, selected; press Ctrl+C."; }
+    rep.hidden = false;
+  });
+  $("reset").addEventListener("click", () => {
+    state = { results: structuredClone(base), run: DATA.run, asOf: DATA.asOf, selected: null };
+    try { localStorage.removeItem(KEY); } catch (e) {}
+    $("report").hidden = true; render();
+  });
+
+  render();
+})();
+</script>
