@@ -1,6 +1,7 @@
 """Shared Selenium setup. Set LOAN_APP_URL to the loan application under test.
 Credentials come from environment variables, never from this file."""
 import os
+
 import pytest
 from selenium import webdriver
 

@@ -1,0 +1,7 @@
+# Lint rules for the Python in this project (Brit Dunn, 2026-11-23).
+# Run: ruff check .
+line-length = 110
+target-version = "py312"
+
+[lint]
+select = ["E", "F", "W", "B", "I", "UP"]

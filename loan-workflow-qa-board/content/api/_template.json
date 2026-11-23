@@ -1,0 +1,69 @@
+{
+  "project": "Project name",
+  "code": "PRJ",
+  "description": "One line on the system under test.",
+  "asOf": "YYYY-MM-DD",
+  "note": "Copy this file to content/api/<project>.json, change the code and paths, then run python tools/api_engine.py --validate.",
+  "baseUrlEnv": "PRJ_API_BASE_URL",
+  "auth": { "type": "bearer", "env": "PRJ_API_BEARER" },
+  "defaultHeaders": { "Accept": "application/json" },
+  "timeoutSeconds": 30,
+  "variables": {},
+  "suites": [
+    {
+      "id": "HLT", "name": "Smoke and access", "phase": "All",
+      "tests": [
+        {
+          "id": "PRJ-API-HLT-001", "title": "Health check answers within two seconds",
+          "method": "GET", "path": "/health", "auth": "none",
+          "expect": { "status": 200, "maxMs": 2000 },
+          "tags": ["smoke"], "priority": "P1"
+        },
+        {
+          "id": "PRJ-API-HLT-002", "title": "A call without credentials returns 401",
+          "method": "GET", "path": "/items", "auth": "none",
+          "expect": { "status": 401 },
+          "tags": ["security", "negative"], "priority": "P1"
+        }
+      ]
+    },
+    {
+      "id": "CRUD", "name": "Create, read, update, delete", "phase": "Core",
+      "tests": [
+        {
+          "id": "PRJ-API-CRUD-001", "title": "Create an item",
+          "method": "POST", "path": "/items",
+          "body": { "name": "Sample {{$rand}}" },
+          "expect": { "status": 201, "json": [ { "path": "id", "type": "string" } ] },
+          "save": { "itemId": "id" },
+          "tags": ["positive"], "priority": "P1"
+        },
+        {
+          "id": "PRJ-API-CRUD-002", "title": "Read the item back",
+          "method": "GET", "path": "/items/{{itemId}}",
+          "expect": { "status": 200, "json": [ { "path": "id", "equals": "{{itemId}}" } ] },
+          "tags": ["positive"], "priority": "P1"
+        },
+        {
+          "id": "PRJ-API-CRUD-003", "title": "Update the item name",
+          "method": "PATCH", "path": "/items/{{itemId}}",
+          "body": { "name": "Renamed" },
+          "expect": { "status": 200, "json": [ { "path": "name", "equals": "Renamed" } ] },
+          "tags": ["positive"], "priority": "P2"
+        },
+        {
+          "id": "PRJ-API-CRUD-004", "title": "Delete the item",
+          "method": "DELETE", "path": "/items/{{itemId}}",
+          "expect": { "status": [200, 204] },
+          "tags": ["positive"], "priority": "P2"
+        },
+        {
+          "id": "PRJ-API-CRUD-005", "title": "The deleted item returns 404",
+          "method": "GET", "path": "/items/{{itemId}}",
+          "expect": { "status": 404 },
+          "tags": ["negative"], "priority": "P2"
+        }
+      ]
+    }
+  ]
+}

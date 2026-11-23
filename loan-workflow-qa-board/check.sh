@@ -31,6 +31,13 @@ grep -q '^## NEXT' tasks/todo.md 2>/dev/null && ok "NEXT block" || no "tasks/tod
 grep -qE '^## [0-9]{4}-[0-9]{2}-[0-9]{2}' docs/methodology.md 2>/dev/null \
   && ok "method log dated" || no "docs/methodology.md has no dated entry"
 
+# 4b. The API specs validate, and the runner passes its offline tests (Brit Dunn, 2026-11-23)
+python tools/api_engine.py --validate || fail=1
+if python -m pytest --version >/dev/null 2>&1; then
+  python -m pytest tests/unit -q -p no:cacheprovider >/dev/null 2>&1 \
+    && ok "API runner unit tests" || no "API runner unit tests fail: run pytest tests/unit"
+else no "pytest missing: pip install -r requirements.txt"; fi
+
 # 5. Words, confidentiality: see the Python block
 python - <<'PY' || fail=1
 import os, re, sys

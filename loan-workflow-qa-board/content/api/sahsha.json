@@ -1,0 +1,323 @@
+{
+  "project": "SAH/SHA grants",
+  "code": "SAH",
+  "description": "API checks for the Specially Adapted Housing and Special Housing Adaptation grant case system, restarting on new infrastructure.",
+  "asOf": "2026-11-23",
+  "note": "Sample specs. The endpoints are placeholders until the new build publishes its API; repoint each path then. The business rules come from the program training guide as summarized in the SAHSHA Builder reference. No Veteran data.",
+  "baseUrlEnv": "SAH_API_BASE_URL",
+  "auth": { "type": "bearer", "env": "SAH_API_BEARER" },
+  "defaultHeaders": { "Accept": "application/json" },
+  "timeoutSeconds": 30,
+  "variables": { "program": "SAH" },
+  "suites": [
+    {
+      "id": "HLT", "name": "Smoke and access", "phase": "All phases",
+      "tests": [
+        {
+          "id": "SAH-API-HLT-001", "title": "Health check answers within two seconds",
+          "method": "GET", "path": "/health", "auth": "none",
+          "expect": { "status": 200, "maxMs": 2000, "json": [ { "path": "status", "equals": "ok" } ] },
+          "tags": ["smoke"], "priority": "P1"
+        },
+        {
+          "id": "SAH-API-HLT-002", "title": "Case list refuses a call without credentials",
+          "method": "GET", "path": "/cases", "auth": "none",
+          "expect": { "status": 401 },
+          "tags": ["smoke", "security", "negative"], "priority": "P1"
+        }
+      ]
+    },
+    {
+      "id": "CASE", "name": "Case intake", "phase": "Eligibility and assignment",
+      "tests": [
+        {
+          "id": "SAH-API-CASE-001", "title": "Create a grant case; it starts Active",
+          "method": "POST", "path": "/cases",
+          "body": { "program": "{{program}}", "planType": "Plan 1", "entitlementBasis": "2101(a)", "veteranRef": "SAMPLE-VET-{{$rand}}" },
+          "expect": { "status": 201, "json": [
+            { "path": "id", "type": "string" },
+            { "path": "status", "equals": "Active" },
+            { "path": "program", "equals": "{{program}}" }
+          ] },
+          "save": { "caseId": "id" },
+          "tags": ["smoke", "positive"], "priority": "P1",
+          "rule": "Active is the default status after eligibility."
+        },
+        {
+          "id": "SAH-API-CASE-002", "title": "Read the new case back by ID",
+          "method": "GET", "path": "/cases/{{caseId}}",
+          "expect": { "status": 200, "json": [
+            { "path": "id", "equals": "{{caseId}}" },
+            { "path": "status", "equals": "Active" }
+          ] },
+          "tags": ["positive"], "priority": "P1"
+        },
+        {
+          "id": "SAH-API-CASE-003", "title": "Create without a program returns a field error",
+          "method": "POST", "path": "/cases",
+          "body": { "planType": "Plan 1", "veteranRef": "SAMPLE-VET-{{$rand}}" },
+          "expect": { "status": 400, "json": [ { "path": "errors.0.field", "equals": "program" } ] },
+          "tags": ["negative", "validation"], "priority": "P2"
+        },
+        {
+          "id": "SAH-API-CASE-004", "title": "Unknown program code returns 422",
+          "method": "POST", "path": "/cases",
+          "body": { "program": "XYZ", "planType": "Plan 1", "veteranRef": "SAMPLE-VET-{{$rand}}" },
+          "expect": { "status": 422 },
+          "tags": ["negative", "validation"], "priority": "P2",
+          "rule": "Programs: SAH, SHA, IL, TRA."
+        },
+        {
+          "id": "SAH-API-CASE-005", "title": "Unknown case ID returns 404",
+          "method": "GET", "path": "/cases/SAMPLE-DOES-NOT-EXIST",
+          "expect": { "status": 404 },
+          "tags": ["negative"], "priority": "P3"
+        }
+      ]
+    },
+    {
+      "id": "STAT", "name": "Case status", "phase": "Exception paths",
+      "tests": [
+        {
+          "id": "SAH-API-STAT-001", "title": "Move a case to Inactive with a reason",
+          "method": "PATCH", "path": "/cases/{{caseId}}/status",
+          "body": { "status": "Inactive", "reason": "Veteran not pursuing" },
+          "expect": { "status": 200, "json": [ { "path": "status", "equals": "Inactive" } ] },
+          "tags": ["positive", "workflow"], "priority": "P2",
+          "rule": "Inactive: the Veteran stops pursuing the grant, or three contact attempts fail."
+        },
+        {
+          "id": "SAH-API-STAT-002", "title": "Reactivate an Inactive case",
+          "method": "PATCH", "path": "/cases/{{caseId}}/status",
+          "body": { "status": "Active", "reason": "Veteran resumed contact" },
+          "expect": { "status": 200, "json": [ { "path": "status", "equals": "Active" } ] },
+          "tags": ["positive", "workflow"], "priority": "P2"
+        },
+        {
+          "id": "SAH-API-STAT-003", "title": "Inactive without a reason returns 400",
+          "method": "PATCH", "path": "/cases/{{caseId}}/status",
+          "body": { "status": "Inactive" },
+          "expect": { "status": 400, "json": [ { "path": "errors.0.field", "equals": "reason" } ] },
+          "tags": ["negative", "validation"], "priority": "P3"
+        },
+        {
+          "id": "SAH-API-STAT-004", "title": "A status outside the list returns 422",
+          "method": "PATCH", "path": "/cases/{{caseId}}/status",
+          "body": { "status": "Paused", "reason": "Sample" },
+          "expect": { "status": 422 },
+          "tags": ["negative", "validation"], "priority": "P3",
+          "rule": "Statuses: Active, Inactive, Suspended, Closed, Withdrawn, Duplicate, Cancelled, Transferred."
+        },
+        {
+          "id": "SAH-API-STAT-005", "title": "Close before final accounting returns 409",
+          "method": "PATCH", "path": "/cases/{{caseId}}/status",
+          "body": { "status": "Closed", "reason": "Sample" },
+          "expect": { "status": 409, "json": [ { "path": "code", "equals": "FINAL_ACCOUNTING_REQUIRED" } ] },
+          "tags": ["negative", "workflow"], "priority": "P1",
+          "rule": "A case closes after final accounting, or as a death case."
+        }
+      ]
+    },
+    {
+      "id": "GRNT", "name": "Grant calculation", "phase": "Grant submission and approval",
+      "tests": [
+        {
+          "id": "SAH-API-GRNT-001", "title": "SAH Plan 1 pays half of housing plus land",
+          "method": "POST", "path": "/grants/calculate",
+          "body": { "program": "SAH", "plan": 1, "housingCost": 100000, "landCost": 20000 },
+          "expect": { "status": 200, "json": [ { "path": "amount", "approx": 60000 } ] },
+          "tags": ["calculation", "positive"], "priority": "P1",
+          "rule": "SAH Plan 1: (cost of housing unit + land cost) x 50%, up to the maximum."
+        },
+        {
+          "id": "SAH-API-GRNT-002", "title": "SAH Plan 1 stops at the program maximum",
+          "method": "POST", "path": "/grants/calculate",
+          "body": { "program": "SAH", "plan": 1, "housingCost": 900000, "landCost": 100000 },
+          "expect": { "status": 200, "json": [
+            { "path": "maxGrant", "type": "number" },
+            { "path": "amount", "equalsPath": "maxGrant" }
+          ] },
+          "tags": ["calculation", "boundary"], "priority": "P1",
+          "rule": "The grant stops at the yearly maximum; the test reads the maximum from the response."
+        },
+        {
+          "id": "SAH-API-GRNT-003", "title": "SHA Plan 1 pays features plus installation",
+          "method": "POST", "path": "/grants/calculate",
+          "body": { "program": "SHA", "plan": 1, "adaptiveFeatures": 12000, "installation": 3000 },
+          "expect": { "status": 200, "json": [ { "path": "amount", "approx": 15000 } ] },
+          "tags": ["calculation", "positive"], "priority": "P2",
+          "rule": "SHA Plan 1: cost of adaptive features + installation, up to the maximum."
+        },
+        {
+          "id": "SAH-API-GRNT-004", "title": "SHA Plan 5 sums each adaptive feature",
+          "method": "POST", "path": "/grants/calculate",
+          "body": { "program": "SHA", "plan": 5, "features": [4000, 2500, 1500] },
+          "expect": { "status": 200, "json": [ { "path": "amount", "approx": 8000 } ] },
+          "tags": ["calculation", "positive"], "priority": "P2",
+          "rule": "SHA Plan 5: sum of the cost of each adaptive feature."
+        },
+        {
+          "id": "SAH-API-GRNT-005", "title": "A negative cost returns 422",
+          "method": "POST", "path": "/grants/calculate",
+          "body": { "program": "SAH", "plan": 1, "housingCost": -1, "landCost": 0 },
+          "expect": { "status": 422 },
+          "tags": ["calculation", "negative"], "priority": "P3"
+        }
+      ]
+    },
+    {
+      "id": "FEAS", "name": "Feasibility and submission rules", "phase": "Feasibility and Conditional Approval",
+      "tests": [
+        {
+          "id": "SAH-API-FEAS-001", "title": "A mortgage statement older than two months fails feasibility",
+          "method": "POST", "path": "/cases/{{caseId}}/feasibility",
+          "body": { "mortgageStatementDate": "{{$daysAgo:75}}", "titleSearchDate": "{{$daysAgo:30}}" },
+          "expect": { "status": 422, "json": [ { "path": "errors.0.rule", "equals": "MORTGAGE_STATEMENT_AGE" } ] },
+          "tags": ["rule", "negative"], "priority": "P2",
+          "rule": "Mortgage statement less than 2 months old."
+        },
+        {
+          "id": "SAH-API-FEAS-002", "title": "A title search older than six months fails feasibility",
+          "method": "POST", "path": "/cases/{{caseId}}/feasibility",
+          "body": { "mortgageStatementDate": "{{$daysAgo:20}}", "titleSearchDate": "{{$daysAgo:200}}" },
+          "expect": { "status": 422, "json": [ { "path": "errors.0.rule", "equals": "TITLE_SEARCH_AGE" } ] },
+          "tags": ["rule", "negative"], "priority": "P2",
+          "rule": "Title search within 6 months."
+        },
+        {
+          "id": "SAH-API-FEAS-003", "title": "Current statement and title search pass feasibility",
+          "method": "POST", "path": "/cases/{{caseId}}/feasibility",
+          "body": { "mortgageStatementDate": "{{$daysAgo:20}}", "titleSearchDate": "{{$daysAgo:30}}" },
+          "expect": { "status": 200, "json": [ { "path": "feasible", "equals": true } ] },
+          "tags": ["rule", "positive"], "priority": "P2"
+        },
+        {
+          "id": "SAH-API-FEAS-004", "title": "Submit with an open checklist returns 409",
+          "method": "POST", "path": "/cases/{{caseId}}/submit",
+          "body": {},
+          "expect": { "status": 409, "json": [ { "path": "code", "equals": "CHECKLIST_INCOMPLETE" } ] },
+          "tags": ["rule", "negative", "workflow"], "priority": "P1",
+          "rule": "The first 7 Grant Checklist items need a Completed Date before submission."
+        }
+      ]
+    },
+    {
+      "id": "PAY", "name": "Payment schedule and disbursement", "phase": "Payment schedule and escrow",
+      "tests": [
+        {
+          "id": "SAH-API-PAY-001", "title": "A payment schedule holds back 20% of the contract price",
+          "method": "POST", "path": "/cases/{{caseId}}/payment-schedule",
+          "body": { "contractPrice": 100000, "stages": [
+            { "stage": 1, "description": "Foundation", "amount": 40000 },
+            { "stage": 2, "description": "Framing and rough-ins", "amount": 40000 },
+            { "stage": 3, "description": "Completion", "amount": 20000 }
+          ] },
+          "expect": { "status": 201, "json": [
+            { "path": "holdback", "approx": 20000 },
+            { "path": "id", "type": "string" }
+          ] },
+          "save": { "scheduleId": "id" },
+          "tags": ["rule", "calculation", "positive"], "priority": "P1",
+          "rule": "20% holdback of full project cost until the Final Field Review."
+        },
+        {
+          "id": "SAH-API-PAY-002", "title": "Disbursement before signatures and escrow returns 409",
+          "method": "POST", "path": "/cases/{{caseId}}/disbursements",
+          "body": { "scheduleId": "{{scheduleId}}", "stage": 1 },
+          "expect": { "status": 409, "json": [ { "path": "code", "equals": "SCHEDULE_NOT_SIGNED" } ] },
+          "tags": ["rule", "negative"], "priority": "P1",
+          "rule": "Construction waits until every party signs the schedule and funds sit in escrow."
+        },
+        {
+          "id": "SAH-API-PAY-003", "title": "Stage 2 waits while the stage 1 inspection stays open",
+          "method": "POST", "path": "/cases/{{caseId}}/disbursements",
+          "body": { "scheduleId": "{{scheduleId}}", "stage": 2 },
+          "expect": { "status": 409, "json": [ { "path": "code", "equals": "PRIOR_INSPECTION_OPEN" } ] },
+          "tags": ["rule", "negative", "workflow"], "priority": "P2",
+          "rule": "One inspection at a time; the AAO approves it before the next stage."
+        },
+        {
+          "id": "SAH-API-PAY-004", "title": "Cost analysis flags a gap over 5%",
+          "method": "POST", "path": "/cost-analysis",
+          "body": { "vaEstimate": 106000, "contractEstimate": 100000 },
+          "expect": { "status": 200, "json": [ { "path": "overchargeFlag", "equals": true } ] },
+          "tags": ["rule", "calculation"], "priority": "P2",
+          "rule": "Cost analysis: a VA estimate more than 5% off the contract signals overcharging."
+        },
+        {
+          "id": "SAH-API-PAY-005", "title": "Cost analysis passes a gap under 5%",
+          "method": "POST", "path": "/cost-analysis",
+          "body": { "vaEstimate": 104000, "contractEstimate": 100000 },
+          "expect": { "status": 200, "json": [ { "path": "overchargeFlag", "equals": false } ] },
+          "tags": ["rule", "calculation", "boundary"], "priority": "P3"
+        }
+      ]
+    },
+    {
+      "id": "INSP", "name": "Compliance inspector fees", "phase": "Construction, inspections and disbursements",
+      "tests": [
+        {
+          "id": "SAH-API-INSP-001", "title": "Two inspections at 100 miles round trip cost $490.20",
+          "method": "POST", "path": "/inspector-fees/calculate",
+          "body": { "inspections": 2, "foundationOnly": 0, "roundTripMiles": 100 },
+          "expect": { "status": 200, "json": [ { "path": "total", "approx": 490.2 } ] },
+          "tags": ["calculation", "rule"], "priority": "P2",
+          "rule": "CI fees: $225 per inspection, $175 foundation-only, $0.67 per mile over 40 miles round trip (from 2024-01-01)."
+        },
+        {
+          "id": "SAH-API-INSP-002", "title": "A foundation-only visit inside 40 miles costs $175",
+          "method": "POST", "path": "/inspector-fees/calculate",
+          "body": { "inspections": 0, "foundationOnly": 1, "roundTripMiles": 30 },
+          "expect": { "status": 200, "json": [ { "path": "total", "approx": 175 } ] },
+          "tags": ["calculation", "boundary"], "priority": "P3"
+        }
+      ]
+    },
+    {
+      "id": "DOC", "name": "Document upload rules", "phase": "Grant submission and approval",
+      "tests": [
+        {
+          "id": "SAH-API-DOC-001", "title": "A signed, final PDF with a clean name uploads",
+          "method": "POST", "path": "/cases/{{caseId}}/documents",
+          "body": { "fileName": "Floor plan v2.pdf", "contentType": "application/pdf", "signed": true, "final": true, "category": "Plans", "type": "Floor plan" },
+          "expect": { "status": 201, "json": [ { "path": "id", "type": "string" } ] },
+          "tags": ["positive", "documents"], "priority": "P2",
+          "rule": "Uploads: PDF, correct orientation, signed and final, no periods in file names, no drafts."
+        },
+        {
+          "id": "SAH-API-DOC-002", "title": "A file name with extra periods returns 422",
+          "method": "POST", "path": "/cases/{{caseId}}/documents",
+          "body": { "fileName": "Floor.plan.v2.pdf", "contentType": "application/pdf", "signed": true, "final": true, "category": "Plans", "type": "Floor plan" },
+          "expect": { "status": 422, "json": [ { "path": "errors.0.field", "equals": "fileName" } ] },
+          "tags": ["negative", "documents"], "priority": "P2"
+        },
+        {
+          "id": "SAH-API-DOC-003", "title": "A JPEG upload returns 415",
+          "method": "POST", "path": "/cases/{{caseId}}/documents",
+          "body": { "fileName": "Site photo.jpg", "contentType": "image/jpeg", "signed": true, "final": true, "category": "Plans", "type": "Floor plan" },
+          "expect": { "status": 415 },
+          "tags": ["negative", "documents"], "priority": "P3"
+        },
+        {
+          "id": "SAH-API-DOC-004", "title": "A draft upload returns 422",
+          "method": "POST", "path": "/cases/{{caseId}}/documents",
+          "body": { "fileName": "Contract draft.pdf", "contentType": "application/pdf", "signed": false, "final": false, "category": "Contract", "type": "Builder contract" },
+          "expect": { "status": 422 },
+          "tags": ["negative", "documents"], "priority": "P3"
+        }
+      ]
+    },
+    {
+      "id": "NTF", "name": "Notifications", "phase": "Initial contact and materials",
+      "tests": [
+        {
+          "id": "SAH-API-NTF-001", "title": "Veteran notifications carry no SSN",
+          "method": "GET", "path": "/cases/{{caseId}}/notifications", "query": { "recipient": "veteran" },
+          "expect": { "status": 200, "bodyNotMatches": ["\\b\\d{3}-\\d{2}-\\d{4}\\b", "\\b\\d{9}\\b"] },
+          "tags": ["security", "privacy"], "priority": "P1",
+          "rule": "Email to a Veteran must not include PII."
+        }
+      ]
+    }
+  ]
+}
