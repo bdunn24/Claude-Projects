@@ -38,6 +38,12 @@ if python -m pytest --version >/dev/null 2>&1; then
     && ok "API runner unit tests" || no "API runner unit tests fail: run pytest tests/unit"
 else no "pytest missing: pip install -r requirements.txt"; fi
 
+# 4c. The Python typechecks (pyright, pinned; Brit Dunn, 2026-11-23)
+if command -v npx >/dev/null 2>&1; then
+  npx --yes pyright@1.1.414 tools tests >/dev/null 2>&1 \
+    && ok "pyright: no type errors" || no "pyright finds type errors: run npx pyright@1.1.414 tools tests"
+else no "npx missing: install Node.js to run pyright"; fi
+
 # 5. Words, confidentiality: see the Python block
 python - <<'PY' || fail=1
 import os, re, sys

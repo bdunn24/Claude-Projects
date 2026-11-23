@@ -22,6 +22,7 @@ import urllib.request
 import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 ROOT = Path(__file__).resolve().parent.parent
 SPEC_DIR = ROOT / "content" / "api"
@@ -98,7 +99,7 @@ def builtin(name: str, env=os.environ, today: datetime.date | None = None):
     raise ValueError(f"unknown built-in {name}")
 
 
-def resolve(name: str, ctx: dict, env=os.environ):
+def resolve(name: str, ctx: dict, env=os.environ) -> Any:
     if name.startswith("$"):
         return builtin(name, env)
     if name not in ctx:
@@ -106,7 +107,7 @@ def resolve(name: str, ctx: dict, env=os.environ):
     return ctx[name]
 
 
-def substitute(value, ctx: dict, env=os.environ):
+def substitute(value: Any, ctx: dict, env=os.environ) -> Any:
     """Fill {{name}} placeholders. A string that is one placeholder keeps the value's type."""
     if isinstance(value, str):
         whole = VAR_RX.fullmatch(value)
@@ -122,7 +123,7 @@ def substitute(value, ctx: dict, env=os.environ):
 
 # --- Checks ----------------------------------------------------------------
 
-def get_path(data, path: str):
+def get_path(data: Any, path: str) -> Any:
     """Dot path into JSON: 'id', 'errors.0.field', '$.items.2.status'."""
     path = path.removeprefix("$").lstrip(".")
     cur = data
